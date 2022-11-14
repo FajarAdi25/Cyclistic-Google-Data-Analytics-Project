@@ -1,0 +1,795 @@
+---
+title: "Cyclistic Google Data Analysis Project"
+author: "Fajar Adi Prasetio"
+date: "2022-11-11"
+Linkedin : "https://www.linkedin.com/in/fajar-adi-prasetio/"
+output: html_document
+---
+
+# Latar Belakang
+
+Pada 2016, Cyclistic meluncurkan penawaran berbagi sepeda yang sukses. Sejak itu, program tersebut telah berkembang menjadi armada 5.824 sepeda yang dilacak secara geografis dan dikunci ke dalam jaringan 692 stasiun di seluruh Chicago. Beberapa jenis pengguna yaitu pengguna kasual dan anggota tahunan (member). Jenis tiket yang dijual yaitu tiket sekali jalan, tiket sehari penuh, dan keanggotaan tahunan. Pengguna yang membeli tiket sekali jalan atau tiket sehari penuh disebut sebagai pengguna kasual. Pengguna yang membeli keanggotaan tahunan adalah anggota / member Cyclistic.
+
+
+# 1. Business Task
+
+1.	Bagaimana anggota tahunan dan pengguna biasa menggunakan sepeda secara berbeda?
+2.	Mengapa pengguna biasa membeli keanggotaan tahunan Cyclistic?
+3.	Bagaimana Cyclistic menggunakan media digital untuk mempengaruhi pengguna biasa untuk menjadi anggota?
+
+
+# 2. Menyiapkan Data
+
+## 2.1. Sumber Data
+
+Dalam study case ini data telah disediakan oleh [Motivate International Inc](https://divvy-tripdata.s3.amazonaws.com/index.html) dengan [lisensi](https://ride.divvybikes.com/data-license-agreement) berikut.
+
+
+## 2.2. Keterangan Data
+
+Data berisikan 12 CSV file dengan ukuran data sekitar 1,1 Gb. Didalam isi data terdapat 5.901.314 baris dan 13 kolom dengan komposisi sebagai berikut: 
+
+1.  Data Waktu
+    -   started_at
+    -   ended_at
+
+2.  Data Kategori
+    -   rideable_type
+    -   member_casual
+
+3.  Data Spasial
+    -   start_lat
+    -   start_lng
+    -   end_lat
+    -   end_lng
+
+4.  Data ID
+    -   ride_id
+    -   start_station_id
+    -   start_station_name
+    -   end_station_id
+    -   end_station_name
+
+    
+# 3. Proses Data
+
+Didalam proses data saya telah membersihkan data menggunakan Microsoft Excel. Clean Log dapat dilihat [di sini](https://github.com/FajarAdi25/Cyclistic-Google-Data-Analytics-Project/blob/main/clean%20log.txt)
+
+# 4. Analisis Data
+
+## 4.1. Import Library, Data dan Menyatukan Data
+
+```{r import}
+library(tidyverse)     # dasar library untuk data analisis
+library(readxl)        # untuk membaca file excel
+library(lubridate)     # untuk format data waktu
+library(ggplot2)       # untuk ploting data
+library(here)          # untuk cleaning data
+library(janitor)       # dasar library untuk data analisis
+library(skimr)         # dasar library untuk data analisis
+library(gghighlight)   # untuk highlight plot
+library(reshape2)      # for manipulasi data
+library(geosphere)     # untuk hitung geo distance
+library(RColorBrewer)  # untuk gradasi warna
+```
+```{r menyatukan data}
+#upload data
+Trip_202108 <- read_excel("D:/Coursera/Dataset/new_trip_data/202108-tripdata.xlsx")
+Trip_202109 <- read_excel("D:/Coursera/Dataset/new_trip_data/202109-tripdata.xlsx")
+Trip_202110 <- read_excel("D:/Coursera/Dataset/new_trip_data/202110-tripdata.xlsx")
+Trip_202111 <- read_excel("D:/Coursera/Dataset/new_trip_data/202111-tripdata.xlsx")
+Trip_202112 <- read_excel("D:/Coursera/Dataset/new_trip_data/202112-tripdata.xlsx")
+Trip_202201 <- read_excel("D:/Coursera/Dataset/new_trip_data/202201-tripdata.xlsx")
+Trip_202202 <- read_excel("D:/Coursera/Dataset/new_trip_data/202202-tripdata.xlsx")
+Trip_202203 <- read_excel("D:/Coursera/Dataset/new_trip_data/202203-tripdata.xlsx")
+Trip_202204 <- read_excel("D:/Coursera/Dataset/new_trip_data/202204-tripdata.xlsx")
+Trip_202205 <- read_excel("D:/Coursera/Dataset/new_trip_data/202205-tripdata.xlsx")
+Trip_202206 <- read_excel("D:/Coursera/Dataset/new_trip_data/202206-tripdata.xlsx")
+Trip_202207 <- read_excel("D:/Coursera/Dataset/new_trip_data/202207-tripdata.xlsx")
+
+#gabung data
+data_trip <- rbind(Trip_202108,Trip_202109,Trip_202110,Trip_202111,Trip_202112,Trip_202201,Trip_202202,Trip_202203,Trip_202204,Trip_202205,Trip_202206,Trip_202207)
+
+#hapus data satuan
+rm(Trip_202108,Trip_202109,Trip_202110,Trip_202111,Trip_202112,Trip_202201,Trip_202202,Trip_202203,Trip_202204,Trip_202205,Trip_202206,Trip_202207)
+
+summary(data_trip)
+```
+
+```{r hapus missing value}
+data_trip_clean <- drop_na(data_trip)
+summary(data_trip_clean)
+```
+
+```{r skimming}
+skim_without_charts(data_trip_clean)     # deskripsi data
+```
+
+Berdasarkan skimming kita mengetahui rincian data sebagai berikut:
+
+-   **Total Baris** : 4629119 baris
+-   **Total Kolom** : 16 kolom
+-   **Data Kategori** : 9 kolom (ride_id, bike_type, month_year, day_of_week, start_station_name, start_station_id, end_station_name, end_station_id, customer_type)
+-   **Data Waktu** : 2 kolom (started_at, ended_at)
+-   **Data Numerik** : 5 kolom (duration, start_lat, start_lng, end_lat, end_lng)
+
+dengan detail kolom:
+
+1.  **ride_id** : nomor id pengguna
+2.  **bike_type** : jenis sepeda, terdapat 3 jenis yaitu classic bike, docked bike, dan electric bike
+3.  **started_at** : tanggal dan waktu mulai perjalanan
+4.  **ended_at** : tanggal dan waktu akhir perjalanan
+5.  **day_of_week** : nama hari saat penyewaan dimulai
+6.  **start_station_name** : nama stasiun saat mulai perjalanan
+7.  **start_station_id** : id stasiun saat mulai perjalanan
+8.  **end_station_name** : nama stasiun saat akhir perjalanan
+9.  **end_station_id** : id stasiun saat akhir perjalanan
+10. **customer_type** : jenis pengguna, terdapat 2 jenis yaitu member dan casual
+11. **duration** : lama penyewaan sepeda
+12. **start_lat** : latitude (garis lintang) dari stasiun awal
+13. **start_lng** : longitude (garis bujur) dari stasiun awal
+14. **end_lat** : latitude (garis lintang) dari stasiun akhir
+15. **end_lng** : longitude (garis bujur) dari stasiun akhir
+
+
+## 4.2. Menentukan Batasan Durasi dan Jarak
+
+### 4.2.1.  Batasan Durasi
+
+```{r dataframe durasi}
+data_durasi <- data_trip_clean %>%
+  select(duration, customer_type)
+```
+
+```{r summarize durasi}
+# summarize data_durasi
+data_durasi %>% 
+  group_by(customer_type) %>% 
+  summarize(mean_duration = mean(duration),
+            variance = var(duration),
+            min_duration = min(duration),
+            q1_duration = quantile(duration,0.25),
+            median_duration = median(duration),
+            q3_duration = quantile(duration,0.75),
+            max_duration = max(duration),
+            total_duration = sum(duration),
+            total_data = n())
+```
+
+```{r boxplot durasi}
+# boxplot durasi
+ggplot(data = data_durasi,
+       mapping = aes(x=duration, y=customer_type, fill=customer_type)) +
+  geom_boxplot() +
+  labs(title = "Distribusi Durasi",
+            subtitle = "Per Menit Berdasarkan Tipe Pengguna",
+            x = "Durasi (Menit)",
+            y = "Tipe Pengguna") +
+  scale_fill_manual(values=c("#34A853","#FBBC05")) +
+  theme(plot.title = element_text(hjust=.5),
+        plot.subtitle = element_text(hjust=.5),
+        legend.position = "none")+
+  scale_x_continuous(breaks=seq(0,1440,60),
+                     labels=seq(0,1440,60),
+                     limits=c(0,360))
+```
+
+```{r filter histogram durasi}
+#histogram durasi
+ggplot(data=data_durasi,
+       mapping=aes(x=duration, fill=factor(customer_type, levels=c("casual","member")))) + 
+  geom_histogram(breaks=seq(0,360,1),
+                 position="identity",
+                 alpha=.5) +
+  scale_x_continuous(breaks=seq(0,360,30),
+                     labels=seq(0,360,30)) +
+  labs(title="Distribusi Durasi",
+       subtitle="Berdasarkan Tipe Pengguna",
+       x="Durasi (Menit)",
+       y="Total",
+       fill="Tipe Pengguna") +
+  theme_bw()+
+  theme(plot.title = element_text(hjust=0.5, size=20),
+        plot.subtitle = element_text(hjust=0.5)) +
+  scale_fill_manual(values=c("#34A853","#FBBC05"))
+```
+
+
+Insight:
+
+-   Dilihat dari boxplot, kumpulan data terbanyak berada antara 0-30 menit.
+-   Dilihat dari distribusi data, kemiringan cenderung positif, dan dari durasi 120 menit keatas tidak ada perubahan signifikan. Untuk itu saya membatasi durasi maksimal di 120 menit.
+
+
+```{r filter durasi}
+#filter durasi
+data_durasi_clean <- data_durasi %>% 
+  filter(duration <= 120)
+
+```
+
+```{r donut chart durasi}
+data_durasi_banding <- data.frame(data=c("Data Durasi <=120 Menit","Data Durasi >120 Menit"),
+                             data_count=c(length(data_durasi_clean$duration),
+                                          length(data_durasi$duration)-length(data_durasi_clean$duration)))
+data_durasi_banding$fraction <- data_durasi_banding$data_count / sum(data_durasi_banding$data_count)
+data_durasi_banding$ymax <- cumsum(data_durasi_banding$fraction)
+data_durasi_banding$ymin <- c(0, head(data_durasi_banding$ymax, n=-1))
+data_durasi_banding$labelPosition <- (data_durasi_banding$ymax + data_durasi_banding$ymin)/2
+data_durasi_banding$label <- paste0(data_durasi_banding$data, "\n Persentase: ", round(data_durasi_banding$fraction*100,2),"%")
+ggplot(data=data_durasi_banding, mapping=aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=data)) +
+  geom_rect() +
+  geom_text(x=2, aes(y=labelPosition, label=label, color=data), size=3.5) +
+  labs(title="Perbandingan Data Durasi") +
+  scale_fill_manual(values=c("#4285F4","#EA4335")) +
+  scale_color_manual(values=c("#4285F4","#EA4335")) +
+  coord_polar(theta="y") +
+  xlim(c(0,4)) +
+  theme_void()
+```
+Insight:
+-       Sebanyak 99,08% data berisi durasi <=120 menit. Karena persentase cukup besar data ini akan saya gunakan untuk proses analisis.
+
+### 4.2.2.  Batasan Jarak
+
+```{r dataframe jarak}
+data_jarak <- data_trip_clean %>%
+  select(start_lat, start_lng, end_lat, end_lng, customer_type)
+
+```
+
+```{r hitung jarak}
+# hitung jarak
+data_jarak <- data_jarak %>% 
+  mutate(distance = round(distHaversine(cbind(data_jarak$start_lng,data_jarak$start_lat),
+                                  cbind(data_jarak$end_lng, data_jarak$end_lat)),digits=5))
+```
+
+```{r summary}
+# summarize jarak
+data_jarak %>% 
+  group_by(customer_type) %>% 
+  summarize(mean_distance = mean(distance),
+            variance = var(distance),
+            min_distance = min(distance),
+            q1_distance = quantile(distance,0.25),
+            median_distance = median(distance),
+            q3_distance = quantile(distance,0.75),
+            max_distance = max(distance),
+            total_distance = sum(distance),
+            total_data = n())
+```
+
+```{r boxplot jarak}
+# boxplot jarak
+ggplot(data = data_jarak,
+       mapping = aes(x=distance, y=customer_type, fill=customer_type)) +
+  geom_boxplot() +
+  labs(title = "Distribusi Jarak",
+            subtitle = "Berdasarkan Tipe Pengguna",
+            x = "Jarak (Meter)",
+            y = "Tipe Pengguna") +
+  theme(plot.title = element_text(hjust=.5),
+        plot.subtitle = element_text(hjust=.5),
+        axis.text.x=element_text(angle=90),
+        legend.position = "none") +
+  scale_fill_manual(values=c("#34A853","#FBBC05")) +
+  scale_x_continuous(breaks=seq(0,13000,1000),
+                     labels=seq(0,13000,1000),
+                     limits=c(0,13000))
+```
+
+```{r filter histogram jarak}
+#histogram jarak
+ggplot(data = data_jarak,
+       mapping = aes(x=distance, fill=factor(customer_type, levels=c("casual","member")))) +
+  geom_histogram(breaks=seq(0,13000,1000),
+                 position = "identity",
+                 alpha = .5) +
+  scale_x_continuous(breaks=seq(0,13000,1000),
+                     labels=seq(0,13000,1000)) +
+  labs(title = "Distribusi Jarak",
+            subtitle = "Berdasarkan Tipe Pengguna",
+            x = "Jarak (Meter)",
+            y="Total",
+            fill="Tipe Pengguna") +
+  theme(plot.title = element_text(hjust=.5, size=20),
+        plot.subtitle = element_text(hjust=.5),
+        axis.text.x=element_text(angle=90)) +
+  scale_fill_manual(values=c("#34A853","#FBBC05"))
+```
+
+Insight:
+
+-   Dilihat dari boxplot, kumpulan data terbanyak berada antara 1000 - 3000 meter.
+-   Dilihat dari distribusi data, kemiringan cenderung positif, dan dari jarak 12000 meter keatas tidak ada perubahan signifikan. Untuk itu saya membatasi jarak maksimal di 12000 meter.
+
+```{r filter jarak}
+data_jarak_clean <- data_jarak %>%
+  filter(distance <= 12000)
+
+```
+
+```{r donut chart jarak}
+data_jarak_banding <- data.frame(data=c("Data Jarak <=12000 M","Data Jarak >12000 M"),
+                             data_count=c(length(data_jarak_clean$distance),
+                                          length(data_jarak$distance)-length(data_jarak_clean$distance)))
+data_jarak_banding$fraction <- data_jarak_banding$data_count / sum(data_jarak_banding$data_count)
+data_jarak_banding$ymax <- cumsum(data_jarak_banding$fraction)
+data_jarak_banding$ymin <- c(0, head(data_jarak_banding$ymax, n=-1))
+data_jarak_banding$labelPosition <- (data_jarak_banding$ymax + data_jarak_banding$ymin)/2
+data_jarak_banding$label <- paste0(data_jarak_banding$data, "\n Persentase: ", round(data_jarak_banding$fraction*100,2),"%")
+ggplot(data=data_jarak_banding, mapping=aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=data)) +
+  geom_rect() +
+  geom_text(x=2, aes(y=labelPosition, label=label, color=data), size=3.5) +
+  labs(title="Perbandingan Data Jarak") +
+  scale_fill_manual(values=c("#4285F4","#EA4335")) +
+  scale_color_manual(values=c("#4285F4","#EA4335")) +
+  coord_polar(theta="y") +
+  xlim(c(0,4)) +
+  theme_void()
+```
+
+
+Insight:
+
+-   Sebanyak 99,81% data berisi jarak <=12000 meter. Karena persentase cukup besar data ini akan saya gunakan untuk proses analisis.
+
+
+```{r kolom jarak}
+# buat kolom jarak
+data_trip_clean <- data_trip_clean %>% 
+  mutate(distance = round(distHaversine(cbind(data_trip_clean$start_lng,data_trip_clean$start_lat),
+                                  cbind(data_trip_clean$end_lng, data_trip_clean$end_lat)),digits=5))
+
+```
+
+```{r filter data}
+#filter data
+data_trip_clean <- data_trip_clean %>%
+  filter(distance <= 12000,
+         duration <= 120)
+
+```
+
+```{r summary data}
+#summary data
+summary(data_trip_clean)
+```
+
+## 4.3.  Analisis Durasi
+
+```{r histogram durasi}
+ggplot(data=data_trip_clean,
+       mapping=aes(x=duration, fill=customer_type)) + 
+  geom_histogram(breaks=seq(0,120,1),
+                 position="identity",
+                 alpha=.5) +
+  scale_x_continuous(breaks=seq(0,120,10),
+                     labels=seq(0,120,10)) +
+  labs(title="Distribusi Durasi",
+       subtitle="Berdasarkan Tipe Pengguna",
+       x="Durasi (Menit)",
+       y="Total",
+       fill="Tipe Pengguna") +
+  theme_bw()+
+  theme(plot.title = element_text(hjust=0.5, size=20),
+        plot.subtitle = element_text(hjust=0.5)) +
+  scale_fill_manual(values=c("#34A853","#FBBC05")) +
+  geom_vline(xintercept=16, linetype="dashed", color="#EA4335", size=1) +
+  annotate("text", x=50, y=150000, label="Rata - rata Durasi 16 Menit", color="black", size=4)
+```
+
+```{r hitung pengguna tiap durasi}
+# buat objek plot
+data_durasi_1 <- ggplot(data=data_trip_clean, mapping=aes(x=duration, fill=customer_type)) +
+  geom_histogram(breaks=seq(0,120,16), position="identity")
+data_durasi_2 <- ggplot(data=data_trip_clean, mapping=aes(x=duration, fill=customer_type)) +
+  geom_histogram(breaks=seq(16,120,104), position="identity")
+# ambil objek plot menggunakan ggplot_build
+hitung_data_durasi_1 <- ggplot_build(data_durasi_1)$data[[1]]$count
+hitung_data_durasi_2 <- ggplot_build(data_durasi_2)$data[[1]]$count
+# hasil hitung untuk pengguna member dan casual
+casual_1 <- hitung_data_durasi_1[1]
+casual_2 <- hitung_data_durasi_2[1]
+member_1 <- hitung_data_durasi_1[8]
+member_2 <- hitung_data_durasi_2[2]
+# summary durasi
+durasi_summary = data.frame(time_frame=c("0-16 Menit","0-16 Menit","16-120 Menit","16-120 Menit"),
+                              customer_type=c("casual","member","casual","member"),
+                              total=c(casual_1,member_1,casual_2,member_2),
+                              percentage=c(round((100*casual_1/(casual_1+casual_2)),1),
+                                           round((100*member_1/(member_1+member_2)),1),
+                                           round((100*casual_2/(casual_1+casual_2)),1),
+                                           round((100*member_2/(member_1+member_2)),1)))
+# clear data yg tidak terpakai
+rm(data_durasi_1,data_durasi_2, hitung_data_durasi_1,hitung_data_durasi_2,
+   casual_1,casual_2,member_1,member_2)
+```
+
+```{r barplot durasi}
+#barplot durasi
+ggplot(data=durasi_summary, mapping=aes(x=time_frame, y=total, fill=customer_type)) +
+  geom_bar(stat="identity") +
+  facet_wrap(~customer_type) +
+  geom_text(aes(label=total), vjust=-0.5, fontface="bold", size=6) +
+  geom_text(aes(label=paste(percentage,"%")), vjust=1.5, color="white", fontface="bold", size=6) +
+  labs(title="Jumlah Pengguna dan Durasi",
+       subtitle="Berdasarkan Tipe Pengguna",
+       x="Durasi",
+       y="Jumlah Pengguna",
+       fill="Tipe Pengguna") +
+  scale_y_continuous(limits=c(0,3250000)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust=0.5, size=20),
+        plot.subtitle = element_text(hjust=0.5),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "none") +
+  scale_fill_manual(values=c("#34A853","#FBBC05"))
+```
+Insight:
+
+-     Pengguna member dan casual kebanyakan menggunakan sepeda diantara waktu **0-16 menit**
+-     Pengguna casual lebih lama menggunakan sepeda daripada pengguna member
+-     **Pengguna casual diantara waktu 0-16 menit bisa berpotensi untuk menjadi member**
+
+## 4.4.   Analisis Jarak
+```{r histogram jarak}
+ggplot(data=data_trip_clean,
+       mapping=aes(x=distance, fill=customer_type)) + 
+  geom_histogram(breaks=seq(0,12000,1000),
+                 position="identity",
+                 alpha=.5) +
+  scale_x_continuous(breaks=seq(0,12000,1000),
+                     labels=seq(0,12000,1000)) +
+  labs(title="Distribusi Jarak",
+       subtitle="Berdasarkan Tipe Pengguna",
+       x="Jarak (Meter)",
+       y="Total",
+       fill="Tipe Pengguna") +
+  theme_bw()+
+  theme(plot.title = element_text(hjust=0.5, size=20),
+        plot.subtitle = element_text(hjust=0.5),
+        axis.text.x=element_text(angle=90)) +
+  scale_fill_manual(values=c("#34A853","#FBBC05")) +
+  geom_vline(xintercept=2000, linetype="dashed", color="#EA4335", size=1) +
+  annotate("text", x=5000, y=750000, label="Rata - rata Jarak 2.000 Meter", color="black", size=4)
+```
+
+```{r hitung pengguna tiap jarak}
+# buat objek plot
+data_jarak_1 <- ggplot(data=data_trip_clean, mapping=aes(x=distance, fill=customer_type)) +
+  geom_histogram(breaks=seq(0,12000,2000), position="identity")
+data_jarak_2 <- ggplot(data=data_trip_clean, mapping=aes(x=distance, fill=customer_type)) +
+  geom_histogram(breaks=seq(2000,12000,10000), position="identity")
+# ambil objek plot menggunakan ggplot_build
+hitung_data_jarak_1 <- ggplot_build(data_jarak_1)$data[[1]]$count
+hitung_data_jarak_2 <- ggplot_build(data_jarak_2)$data[[1]]$count
+# hasil hitung untuk pengguna member dan casual
+casual_1 <- hitung_data_jarak_1[1]
+casual_2 <- hitung_data_jarak_2[1]
+member_1 <- hitung_data_jarak_1[7]
+member_2 <- hitung_data_jarak_2[2]
+# summary durasi
+jarak_summary = data.frame(time_frame=c("0-2000 Meter","0-2000 Meter","2000-12000 Meter","2000-12000 Meter"),
+                              customer_type=c("casual","member","casual","member"),
+                              total=c(casual_1,member_1,casual_2,member_2),
+                              percentage=c(round((100*casual_1/(casual_1+casual_2)),1),
+                                           round((100*member_1/(member_1+member_2)),1),
+                                           round((100*casual_2/(casual_1+casual_2)),1),
+                                           round((100*member_2/(member_1+member_2)),1)))
+# clear data yg tidak terpakai
+rm(data_jarak_1,data_jarak_2, hitung_data_jarak_1,hitung_data_jarak_2,
+   casual_1,casual_2,member_1,member_2)
+```
+
+```{r barplot jarak}
+ggplot(data=jarak_summary, mapping=aes(x=time_frame, y=total, fill=customer_type)) +
+  geom_bar(stat="identity") +
+  facet_wrap(~customer_type) +
+  geom_text(aes(label=total), vjust=-0.5, fontface="bold", size=6) +
+  geom_text(aes(label=paste(percentage,"%")), vjust=1.5, color="white", fontface="bold", size=6) +
+  labs(title="Jumlah Pengguna dan Jarak",
+       subtitle="Berdasarkan Tipe Pengguna",
+       x="Jarak",
+       y="Jumlah Pengguna",
+       fill="Tipe Pengguna") +
+  scale_y_continuous(limits=c(0,3250000)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust=0.5, size=20),
+        plot.subtitle = element_text(hjust=0.5),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "none") +
+  scale_fill_manual(values=c("#34A853","#FBBC05"))
+```
+
+Insight:
+-     Kebanyakan pengguna member dan casual menggunakan sepedanya dijarak **0-2000 meter**
+-     Pengguna member lebih lama menggunakan sepeda daripada pengguna casual
+-     **Pengguna casual diantara jarak 0-2000 meter bisa berpotensi untuk menjadi member**
+
+
+## 4.5.   Analisis Hari
+
+```{r dataframe hari}
+data_hari <- data_trip_clean %>%
+  group_by(customer_type, day_of_week) %>% 
+  summarise(value=n()/52)
+```
+
+```{r mengurutkan hari}
+#fungsi konversi nama hari
+day_number <- function(day_name){
+  num = c()
+  for (day_of_week in day_name){
+    if (day_of_week=="Senin"){
+      num <- append(num,1)
+    } else if (day_of_week=="Selasa"){
+      num <- append(num,2)
+    } else if (day_of_week=="Rabu"){
+      num <- append(num,3)
+    } else if (day_of_week=="Kamis"){
+      num <- append(num,4)
+    } else if (day_of_week=="Jumat"){
+      num <- append(num,5)
+    } else if (day_of_week=="Sabtu"){
+      num <- append(num,6)
+    } else if (day_of_week=="Minggu"){
+      num <- append(num,7)
+    }
+  }
+  return(num)
+}
+#buat kolom id untuk nama hari
+data_hari$id <- day_number(data_hari$day_of_week)
+```
+
+```{r lineplot data hari}
+ggplot(data=data_hari, mapping=aes(x=id, y=value, color=customer_type))+
+  geom_line(size=1) +
+  geom_point(size=3) +
+  theme_bw() +
+  scale_x_continuous(breaks=c(1,2,3,4,5,6,7),
+                   labels=c("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu")) +
+  scale_y_continuous(breaks=seq(0,15000,3000),
+                     limits=c(0,15000)) +
+  scale_color_manual(values=c("#34A853","#FBBC05")) +
+  labs(title="Rata - rata Penggunaan Per Hari",
+       subtitle="Berdasarkan Tipe Pengguna",
+       color="Tipe Pengguna",
+       x="Hari",
+       y="Rata - rata Pengguna") +
+  theme(plot.title = element_text(hjust=0.5, size=20),
+        plot.subtitle = element_text(hjust=0.5),
+        panel.grid.minor=element_blank()) +
+  geom_vline(xintercept=1, linetype="dashed", color="black", size=0.5) +
+  geom_vline(xintercept=5, linetype="dashed", color="black", size=0.5) +
+  geom_vline(xintercept=7, linetype="dashed", color="black", size=0.5) +
+  annotate("text", x=3, y=12000, label="Hari Biasa", color="black", size=5) +
+  annotate("text", x=6, y=12000, label="Hari Libur", color="black", size=5)
+  
+```
+
+Insight:
+-     Kebanyakan pengguna casual menggunakan sepedanya saat hari sabtu. Sementara pengguna member kebanyakan menggunakan sepedanya saat hari biasa dan cenderung turun saat hari libur (sabtu dan minggu).
+-     Melihat kebanyakan pengguna casual yang ramai saat hari libur, kita bisa **melakukan promosi pada hari tersebut untuk menarik pengguna casual agar menjadi member**
+
+
+## 4.6.   Analisis Bulan
+
+```{r dataframe bulan}
+data_bulan <- data_trip_clean %>%
+  group_by(customer_type, month_year) %>% 
+  summarise(value=n()/12)
+```
+
+```{r mengurutkan bulan}
+#fungsi konversi nama bulan
+month_year_number <- function(month_year_name){
+  num = c()
+  for (month_year in month_year_name){
+    if (month_year=="Aug-21"){
+      num <- append(num,1)
+    } else if (month_year=="Sep-21"){
+      num <- append(num,2)
+    } else if (month_year=="Oct-21"){
+      num <- append(num,3)
+    } else if (month_year=="Nov-21"){
+      num <- append(num,4)
+    } else if (month_year=="Dec-21"){
+      num <- append(num,5)
+    } else if (month_year=="Jan-22"){
+      num <- append(num,6)
+    } else if (month_year=="Feb-22"){
+      num <- append(num,7)
+    } else if (month_year=="Mar-22"){
+      num <- append(num,8)
+    } else if (month_year=="Apr-22"){
+      num <- append(num,9)
+    } else if (month_year=="May-22"){
+      num <- append(num,10)
+    } else if (month_year=="Jun-22"){
+      num <- append(num,11)
+    } else if (month_year=="Jul-22"){
+      num <- append(num,12)
+    }
+  }
+  return(num)
+}
+
+#buat kolom id untuk bulan
+data_bulan$id <- month_year_number(data_bulan$month_year)
+```
+
+```{r lineplot bulan}
+ggplot(data=data_bulan, mapping=aes(x=id, y=value, color=customer_type))+
+  geom_line(size=1) +
+  geom_point(size=3) +
+  theme_bw() +
+  scale_x_continuous(breaks=c(1,2,3,4,5,6,7,8,9,10,11,12),
+                    labels=c("Agus-21", "Sep-21", "Okt-21", "Nov-21", "Des-21", "Jan-22", "Feb-22", "Mar-22", "Apr-22", "Mei-22", "Jun-22", "Jul-22")) +
+  scale_y_continuous(breaks=seq(0,35000,5000),
+                     limits=c(0,35000)) +
+  scale_color_manual(values=c("#34A853","#FBBC05")) +
+  labs(title="Rata - rata Penggunaan Per Bulan",
+       subtitle="Berdasarkan Tipe Pengguna",
+       color="Tipe Pengguna",
+       x="Bulan",
+       y="Rata - rata Pengguna") +
+  theme(plot.title = element_text(hjust=0.5, size=20),
+        plot.subtitle = element_text(hjust=0.5),
+        axis.text.x=element_text(angle=30),
+        panel.grid.minor=element_blank()) +
+  geom_vline(xintercept=2, linetype="dashed", color="black", size=0.5) +
+  geom_vline(xintercept=5, linetype="dashed", color="black", size=0.5) +
+  geom_vline(xintercept=8, linetype="dashed", color="black", size=0.5) +
+  geom_vline(xintercept=11, linetype="dashed", color="black", size=0.5) +
+  annotate("text", x=1.3, y=33000, label="Musim\nPanas", color="black", size=3.5) +
+  annotate("text", x=3.5, y=33000, label="Musim\nGugur", color="black", size=3.5) +
+  annotate("text", x=6.5, y=33000, label="Musim\nDingin", color="black", size=3.5) +
+  annotate("text", x=9.5, y=33000, label="Musim\nSemi", color="black", size=3.5) +
+  annotate("text", x=11.8, y=33000, label="Musim\nPanas", color="black", size=3.5)
+```
+Insight:
+
+-     Pengguna terbanyak berada pada musim panas.
+-     Saat musim gugur dan dingin, penggunaan sepeda turun.
+-     Penggunaan sepeda naik lagi saat musim semi hingga musim panas. Waktu ini sangat tepat untuk promosi menarik pelanggan casual agar menjadi member.
+
+
+## 4.7.   Analisis Waktu
+
+```{r dataframe waktu}
+data_waktu <- data_trip_clean %>%
+  select(customer_type,started_at)
+#buat kolom jam
+data_waktu <- data_waktu %>%
+  mutate(started_hour = hour(data_waktu$started_at))
+#summary
+waktu_summary <- data_waktu %>%
+  group_by(customer_type, started_hour) %>% 
+  summarise(count=n()/365)
+```
+
+```{r tren pengguna berdasarkan waktu}
+ggplot(data=waktu_summary, mapping=aes(x=started_hour, y=count, color=customer_type))+
+  geom_point(size=3)+
+  geom_line(size=1)+
+  theme_bw() +
+  scale_x_continuous(breaks=seq(0,23,1))+
+  scale_y_continuous(breaks=seq(0,1000,100),
+                     limits=c(0,1000)) + 
+  scale_color_manual(values=c("#34A853","#FBBC05")) +
+  labs(title="Rata - rata Pengguna Per Waktu",
+       subtitle="Berdasarkan Tipe Pengguna",
+       color="Tipe Pengguna",
+       x="Jam",
+       y="Rata - rata Pengguna") +
+  theme(plot.title = element_text(hjust=0.5, size=20),
+        plot.subtitle = element_text(hjust=0.5),
+        panel.grid.minor=element_blank()) +
+  geom_vline(xintercept=8, linetype="dashed", color="black", size=0.5) +
+  geom_vline(xintercept=17, linetype="dashed", color="black", size=0.5) +
+  geom_label(x=8, y=650, label="Jam Sibuk", color="black", size=5) +
+  geom_label(x=17, y=950, label="Jam Sibuk", color="black", size=5) + 
+  annotate("rect", xmin=7, xmax=9, ymin=-Inf, ymax=Inf, alpha=.1, fill="#34A853") +
+  annotate("rect", xmin=16, xmax=18, ymin=-Inf, ymax=Inf, alpha=.1, fill="#34A853")
+```
+Insight:
+-     Terdapat jam sibuk antara jam 7-9 dan 16-18.
+-     Pengguna casual dan member paling sering menggunakan sepeda saat jam 17.00. yaitu sore hari.
+-     Jika ingin melakukan promosi, sangat cocok dilakukan saat jam sibuk, terutama jam 17.00
+
+
+## 4.8.   Analisis Stasiun
+
+```{r dataframe stasiun mulai}
+data_stasiun_mulai <- data_trip_clean%>%
+  group_by(start_station_name) %>%
+  summarise(total = n()) %>%
+  arrange(desc(total)) %>%
+  slice(1:20)
+
+```
+
+```{r barplot stasiun mulai}
+ggplot(data = data_stasiun_mulai, mapping = aes(x = reorder(start_station_name, total), y = total)) + 
+  geom_bar(stat = "identity", fill = "#34A853")+ 
+  scale_y_continuous(breaks=seq(0,80000,20000),
+                     limits=c(0,80000)) +
+  labs(title = "Top 20 Stasiun Awal Penyewaan",
+       subtitle="Berdasarkan Total Pengguna",
+       x = "Stasiun",
+       y = "Total Pengguna")+
+  theme(plot.title = element_text(hjust=0.5, size=20),
+        plot.subtitle = element_text(hjust=0.5),
+        panel.grid.minor=element_blank()) + 
+  geom_text(aes(label = formatC(total, big.mark = ",", decimal.mark = ".", format = "d")), size = 3.5, hjust = -0.1) +
+  coord_flip()
+```
+
+```{r dataframe stasiun akhir}
+data_stasiun_akhir <- data_trip_clean%>%
+  group_by(end_station_name) %>%
+  summarise(total = n()) %>%
+  arrange(desc(total)) %>%
+  slice(1:20)
+
+```
+
+```{r barplot stasiun akhir}
+ggplot(data = data_stasiun_akhir, mapping = aes(x = reorder(end_station_name, total), y = total)) + 
+  geom_bar(stat = "identity", fill = "#FBBC05")+ 
+  scale_y_continuous(breaks=seq(0,80000,20000),
+                     limits=c(0,80000)) +
+  labs(title = "Top 20 Stasiun Akhir Penyewaan",
+       subtitle="Berdasarkan Total Pengguna",
+       x = "Stasiun",
+       y = "Total Pengguna")+
+  theme(plot.title = element_text(hjust=0.5, size=20),
+        plot.subtitle = element_text(hjust=0.5),
+        panel.grid.minor=element_blank()) + 
+  geom_text(aes(label = formatC(total, big.mark = ",", decimal.mark = ".", format = "d")), size = 3.5, hjust = -0.1) +
+  coord_flip()
+```
+
+```{r}
+join_station <- data_stasiun_mulai %>% 
+  inner_join(data_stasiun_akhir, by=c("start_station_name"="end_station_name")) %>% 
+  mutate(avg_start = round(total.x/365,0), 
+         avg_end = round(total.y/365,0),
+         total = (total.x + total.y)) %>%
+  arrange(desc(total))
+```
+
+```{r barplot top 20 stasiun}
+ggplot(data = join_station, mapping = aes(x = reorder(start_station_name, total), y = total)) + 
+  geom_bar(stat = "identity", fill = "#4285F4")+ 
+  scale_y_continuous(breaks=seq(0,180000,60000),
+                     limits=c(0,180000)) +
+  labs(title = "Top 20 Stasiun",
+       subtitle="Berdasarkan Total Pengguna",
+       x = "Stasiun",
+       y = "Total Pengguna")+
+  theme(plot.title = element_text(hjust=0.5, size=20),
+        plot.subtitle = element_text(hjust=0.5),
+        panel.grid.minor=element_blank()) + 
+  geom_text(aes(label = formatC(total, big.mark = ",", decimal.mark = ".", format = "d")), size = 3.5, hjust = -0.1) +
+  coord_flip()
+```
+Insight:
+-     Stasiun Streeter Dr & Grand Ave menjadi top prioritas untuk tempat iklan karena banyak pengguna beraktifitas disana.
+
+
+# 5. Rekomendasi
+
+-   Membuat program reward untuk member lama dan member baru, dan juga diskon harga tiket tahunan untuk menarik pengguna casual agar beralih ke member.
+-   Membuat akses prioritas bagi pengendara member.
+-   Buat promosi di media sosial saat sore hari dan musim dingin untuk meningkatkan penjualan dan buat event yang menarik setiap bulan terutama saat hari libur (sabtu dan minggu) dan musim panas untuk menarik pengendara casual agar menjadi member.
+-   Membuat iklan dan promosi di sekitar Top 20 Stasiun, terutama pada stasiun Streeter Dr & Grand Ave.
+-   Menargetkan pengguna casual yang menggunakan sepeda antara 0-16 menit dan jarak 0-2000 meter untuk menjadi member
+-   Membuat opsi lain seperti tiket bulanan. Tiket bulanan dapat mendorong lebih banyak pengguna casual menjadi member karena semakin sering mereka menggunakan tiket bulanan, semakin mereka merasa nyaman seperti mendapatkan langganan tahunan.
+
+
