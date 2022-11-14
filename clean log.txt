@@ -1,10 +1,10 @@
-1. mengubah nama kolom member_casual menjadi customer_type
-2. mengubah nama kolom rideable_type menjadi bike_type
-3. mengubah format kolom started_at dengan format date (yyyy-mm-dd hh:mm:ss) 
-4. mengubah format kolom started_at dengan format date (yyyy-mm-dd hh:mm:ss)
-5. membuat kolom month_year dengan format date (mmm-yy)
-5. membuat kolom duration, yang merupakan pengurangan waktu antara kolom started dan ended
-6. membuat kolom day_of_week, yang merupakan keterangan hari berdasarkan kolom started
-7. mengubah kolom start_lat, start_lng, end_lat, end_lng menjadi desimal
-8. cek missing value setiap kolom, terdapan nilai kosong pada end_lat, end_lng, start_station_name, start_station_id, end_station_name, end_station_id. Nilai kosong ini akan dihapus pada analisis menggunakan RStudio
-9. cek duplikat data. Tidak ada data duplikat.
+mengubah nama kolom member_casual menjadi customer_type
+mengubah nama kolom rideable_type menjadi bike_type
+mengubah format kolom started_at dengan format date (yyyy-mm-dd hh:mm:ss) 
+mengubah format kolom started_at dengan format date (yyyy-mm-dd hh:mm:ss)
+membuat kolom month_year dengan format date (mmm-yy)
+membuat kolom duration, yang merupakan pengurangan waktu antara kolom started dan ended
+membuat kolom day_of_week, yang merupakan keterangan hari berdasarkan kolom started
+mengubah kolom start_lat, start_lng, end_lat, end_lng menjadi desimal
+cek missing value setiap kolom, terdapan nilai kosong pada end_lat, end_lng, start_station_name, start_station_id, end_station_name, end_station_id. Nilai kosong ini akan dihapus pada analisis menggunakan RStudio
+cek duplikat data. Tidak ada data duplikat.
