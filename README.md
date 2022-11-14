@@ -14,3 +14,4 @@
 ![Slide 14](https://github.com/FajarAdi25/Cyclistic-Google-Data-Analytics-Project/blob/main/img%20powerpoint/Cyclistic/Slide14.JPG)
 ![Slide 15](https://github.com/FajarAdi25/Cyclistic-Google-Data-Analytics-Project/blob/main/img%20powerpoint/Cyclistic/Slide15.JPG)
 ![Slide 16](https://github.com/FajarAdi25/Cyclistic-Google-Data-Analytics-Project/blob/main/img%20powerpoint/Cyclistic/Slide16.JPG)
+![Slide 17](https://github.com/FajarAdi25/Cyclistic-Google-Data-Analytics-Project/blob/main/img%20powerpoint/Cyclistic/Slide17.JPG)
